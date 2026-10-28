@@ -1,0 +1,6 @@
+{
+  "name": "ADWORDS",
+  "description": "Premium workforce leave scheduling roster and policy coordinator platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,94 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+  }
+  code {
+    font-family: var(--font-mono);
+  }
+}
+
+/* Scrollbar styling - theme adaptive with clean contrast */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #090d16;
+  border: 1px solid #1e293b;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 999px;
+  border: 2px solid #f1f5f9;
+  min-width: 32px;
+  min-height: 32px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+  border: 2px solid #090d16;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+.black-white-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #f1f5f9;
+}
+
+.dark .black-white-scrollbar {
+  scrollbar-color: #334155 #090d16;
+}
+
+.black-white-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+  display: block !important;
+}
+
+.black-white-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9 !important;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+}
+
+.dark .black-white-scrollbar::-webkit-scrollbar-track {
+  background: #090d16 !important;
+  border: 1px solid #1e293b;
+}
+
+.black-white-scrollbar::-webkit-scrollbar-thumb {
+  background: #94a3b8 !important;
+  border-radius: 999px;
+  border: 2px solid #f1f5f9;
+  min-width: 36px;
+}
+
+.dark .black-white-scrollbar::-webkit-scrollbar-thumb {
+  background: #334155 !important;
+  border: 2px solid #090d16;
+}

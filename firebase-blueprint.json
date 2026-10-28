@@ -1,0 +1,105 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account details including role and leave calculations",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique key matching Auth UID" },
+        "username": { "type": "string", "description": "Username matching email handle" },
+        "role": { "type": "string", "enum": ["agent", "TL", "ADMIN", "HR"] },
+        "team": { "type": "string", "description": "Team name: Ernestina, Fausti, Bernice, Precious, or none" },
+        "accrued_leave": { "type": "number", "description": "Current leave days accrued (1.25 days per month + manual adjustments)" },
+        "accruedLeaveDays": { "type": "number", "description": "Accrued leave balance with decimal precision" },
+        "accruedMonths": { "type": "array", "items": { "type": "string" }, "description": "Array of YYYY-MM months that have been automatically accrued" },
+        "lastAccrualMonth": { "type": "string", "description": "Last accrued month YYYY-MM" },
+        "accrualStartMonth": { "type": "string", "description": "Starting month YYYY-MM for accrual eligibility" },
+        "used_leave": { "type": "number", "description": "Total leave days approved and taken" },
+        "priority_score": { "type": "number", "description": "Dynamic priority score for balancing requests" },
+        "leave_history_count": { "type": "integer", "description": "Total historical request count" },
+        "previous_denials": { "type": "integer", "description": "Number of times a leave request was denied" },
+        "recent_approved_requests": { "type": "integer", "description": "Number of recently approved requests" },
+        "peak_day_usage": { "type": "integer", "description": "Number of high-competition days requested" }
+      },
+      "required": ["uid", "username", "role", "team", "accrued_leave", "used_leave"]
+    },
+    "LeaveRequest": {
+      "title": "Leave Request",
+      "description": "A member request for a segment of leave days within the 3-month rolling window",
+      "type": "object",
+      "properties": {
+        "requestId": { "type": "string" },
+        "username": { "type": "string" },
+        "team": { "type": "string" },
+        "startDate": { "type": "string", "format": "date-time" },
+        "endDate": { "type": "string", "format": "date-time" },
+        "totalDays": { "type": "integer" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected", "waitlisted"] },
+        "priorityScoreAtTime": { "type": "number" },
+        "reason": { "type": "string" },
+        "responseComment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["requestId", "username", "team", "startDate", "endDate", "totalDays", "status"]
+    },
+    "TeamRule": {
+      "title": "Team Rule",
+      "description": "Configuration metadata for individual teams",
+      "type": "object",
+      "properties": {
+        "teamId": { "type": "string" },
+        "maxLeavePerDay": { "type": "integer", "description": "Max team members on leave per day (default 3)" }
+      },
+      "required": ["teamId", "maxLeavePerDay"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Real-time alerts for push and notifications ledger",
+      "type": "object",
+      "properties": {
+        "notificationId": { "type": "string" },
+        "recipient": { "type": "string" },
+        "message": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "unread": { "type": "boolean" }
+      },
+      "required": ["notificationId", "recipient", "message", "timestamp", "unread"]
+    },
+    "AuditLog": {
+      "title": "Audit Log",
+      "description": "System access, administrative overrides, and leave calculations logging",
+      "type": "object",
+      "properties": {
+        "logId": { "type": "string" },
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["logId", "username", "action", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and aggregate calculations"
+    },
+    "/leave_requests/{requestId}": {
+      "schema": "LeaveRequest",
+      "description": "Individual leave applications and review states"
+    },
+    "/teams/{teamId}": {
+      "schema": "TeamRule",
+      "description": "Team-level policy and capacity constraints"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Push alerts for leave requests updates"
+    },
+    "/audit_logs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Activity timeline of administrative operations"
+    }
+  }
+}

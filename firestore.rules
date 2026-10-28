@@ -1,0 +1,125 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net - Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helper Functions ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Role-based helper from Firestore user document lookup
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasRole(role) {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == role;
+    }
+
+    // Strict production administrator verification: ONLY ADWORDSADMIN is authorized as Admin
+    function isAdwordsAdmin() {
+      return isSignedIn() 
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid)) 
+        && getUserData().role == 'ADMIN' 
+        && (getUserData().username == 'ADWORDSADMIN' || getUserData().username == 'adwordsadmin');
+    }
+
+    // --- Users Collection ---
+    match /users/{userId} {
+      allow get: if isSignedIn() && (isOwner(userId) || isAdwordsAdmin());
+      allow list: if isSignedIn() && isAdwordsAdmin();
+      
+      // On create, register normal profiles
+      allow create: if isSignedIn() && isOwner(userId) 
+        && incoming().keys().hasAll(['uid', 'username', 'role', 'team', 'accrued_leave', 'used_leave'])
+        && incoming().uid == request.auth.uid
+        && incoming().accrued_leave is number
+        && incoming().used_leave is number;
+
+      // On update, allow modifying specific non-auth fields, blocking role changes for self (except if admin)
+      allow update: if isSignedIn() && (
+        (isOwner(userId) && incoming().role == existing().role && incoming().team == existing().team && incoming().uid == existing().uid)
+        || isAdwordsAdmin()
+      );
+      
+      allow delete: if isAdwordsAdmin();
+    }
+
+    // --- Leave Requests Collection ---
+    match /leave_requests/{requestId} {
+      // Normal agents can read their own. Admin can read all.
+      allow get: if isSignedIn() && (
+        incoming() == null && (resource.data.userId == request.auth.uid || isAdwordsAdmin())
+      );
+      allow list: if isSignedIn() && (
+        isAdwordsAdmin() || resource.data.userId == request.auth.uid
+      );
+
+      allow create: if isSignedIn()
+        && isValidId(requestId)
+        && incoming().keys().hasAll(['requestId', 'userId', 'username', 'team', 'startDate', 'endDate', 'totalDays', 'status'])
+        && incoming().userId == request.auth.uid
+        && incoming().totalDays <= 4  // Core business rule: max 4 leave days per request
+        && incoming().status == 'pending'; // Start at pending
+
+      // Under update, split actions by Tier permissions
+      allow update: if isSignedIn() && (
+        // Admin status actions
+        (
+          isAdwordsAdmin() 
+          && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'responseComment'])
+        )
+        // Owner retracts request
+        || (
+          resource.data.userId == request.auth.uid 
+          && incoming().diff(existing()).affectedKeys().hasOnly(['status']) 
+          && incoming().status == 'rejected' // Self-cancel/retract
+        )
+      );
+
+      allow delete: if isAdwordsAdmin();
+    }
+
+    // --- Teams Rules & Constraints ---
+    match /teams/{teamId} {
+      allow read: if isSignedIn();
+      allow write: if isAdwordsAdmin();
+    }
+
+    // --- Notifications Collection ---
+    match /notifications/{notificationId} {
+      allow get: if isSignedIn() && resource.data.recipient == request.auth.token.email;
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource.data.recipient == request.auth.token.email && incoming().diff(existing()).affectedKeys().hasOnly(['unread']);
+      allow delete: if isAdwordsAdmin();
+    }
+
+    // --- Audit Logs Collection ---
+    match /audit_logs/{logId} {
+      allow read: if isSignedIn() && isAdwordsAdmin();
+      allow create: if isSignedIn();
+      allow update, delete: if false; // Audit logs are immutable
+    }
+  }
+}
